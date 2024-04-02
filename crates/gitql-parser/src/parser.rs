@@ -64,12 +64,12 @@ fn parse_set_query(
     // Consume Set keyword
     *position += 1;
 
-    if *position >= len || tokens[*position].kind != TokenKind::GlobalVariable {
-        return Err(Diagnostic::error(
-            "Expect Global variable name start with `@` after `SET` keyword",
-        )
-        .with_location(get_safe_location(tokens, *position - 1))
-        .as_boxed());
+    if *position >= len || tokens[*position].kind != TokenKind::Symbol {
+        return Err(
+            Diagnostic::error("Expect atleast one Symbol after `SET` keyword")
+                .with_location(get_safe_location(tokens, *position - 1))
+                .as_boxed(),
+        );
     }
 
     let name = &tokens[*position].literal;
@@ -1859,15 +1859,22 @@ fn parse_primary_expression(
         TokenKind::Symbol => {
             let value = tokens[*position].literal.to_string();
             *position += 1;
+
+            if *position > 1 && tokens[*position - 2].kind == TokenKind::Set {
+                return Ok(Box::new(GlobalVariableExpression { name: value }));
+            }
+
+            if *position > 3 && tokens[*position - 4].kind == TokenKind::Set {
+                return Ok(Box::new(StringExpression {
+                    value,
+                    value_type: StringValueType::Text,
+                }));
+            }
+
             if !context.selected_fields.contains(&value) {
                 context.hidden_selections.push(value.to_string());
             }
             Ok(Box::new(SymbolExpression { value }))
-        }
-        TokenKind::GlobalVariable => {
-            let name = tokens[*position].literal.to_string();
-            *position += 1;
-            Ok(Box::new(GlobalVariableExpression { name }))
         }
         TokenKind::Integer => {
             if let Ok(integer) = tokens[*position].literal.parse::<i64>() {

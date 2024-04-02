@@ -53,7 +53,6 @@ pub enum TokenKind {
     BitwiseLeftShift,
 
     Symbol,
-    GlobalVariable,
     Integer,
     Float,
     String,
@@ -116,16 +115,6 @@ pub fn tokenize(script: String) -> Result<Vec<Token>, Box<Diagnostic>> {
             continue;
         }
 
-        // Global Variable Symbol
-        if char == '@' {
-            tokens.push(consume_global_variable_name(
-                &characters,
-                &mut position,
-                &mut column_start,
-            )?);
-            continue;
-        }
-
         // Number
         if char.is_numeric() {
             if char == '0' && position + 1 < len {
@@ -171,8 +160,18 @@ pub fn tokenize(script: String) -> Result<Vec<Token>, Box<Diagnostic>> {
             continue;
         }
 
-        // String literal
+        // Symbol
         if char == '"' {
+            tokens.push(consume_identifier_string(
+                &characters,
+                &mut position,
+                &mut column_start,
+            )?);
+            continue;
+        }
+
+        // String Literal
+        if char == '\'' {
             tokens.push(consume_string(
                 &characters,
                 &mut position,
@@ -625,46 +624,6 @@ pub fn tokenize(script: String) -> Result<Vec<Token>, Box<Diagnostic>> {
     Ok(tokens)
 }
 
-fn consume_global_variable_name(
-    chars: &[char],
-    pos: &mut usize,
-    start: &mut usize,
-) -> Result<Token, Box<Diagnostic>> {
-    // Consume `@`
-    *pos += 1;
-
-    // Make sure first character is  alphabetic
-    if *pos < chars.len() && !chars[*pos].is_alphabetic() {
-        return Err(
-            Diagnostic::error("Global variable name must start with alphabetic character")
-                .add_help("Add at least one alphabetic character after @")
-                .with_location_span(*start, *pos)
-                .as_boxed(),
-        );
-    }
-
-    while *pos < chars.len() && (chars[*pos] == '_' || chars[*pos].is_alphanumeric()) {
-        *pos += 1;
-    }
-
-    // Identifier is being case-insensitive by default, convert to lowercase to be easy to compare and lookup
-    let literal = &chars[*start..*pos];
-    let string = String::from_utf8(literal.iter().map(|&c| c as u8).collect())
-        .unwrap()
-        .to_lowercase();
-
-    let location = Location {
-        start: *start,
-        end: *pos,
-    };
-
-    Ok(Token {
-        location,
-        kind: TokenKind::GlobalVariable,
-        literal: string,
-    })
-}
-
 fn consume_identifier(chars: &[char], pos: &mut usize, start: &mut usize) -> Token {
     while *pos < chars.len() && (chars[*pos] == '_' || chars[*pos].is_alphanumeric()) {
         *pos += 1;
@@ -686,6 +645,42 @@ fn consume_identifier(chars: &[char], pos: &mut usize, start: &mut usize) -> Tok
         kind: resolve_symbol_kind(string.to_string()),
         literal: string,
     }
+}
+
+fn consume_identifier_string(
+    chars: &[char],
+    pos: &mut usize,
+    start: &mut usize,
+) -> Result<Token, Box<Diagnostic>> {
+    *pos += 1;
+
+    while *pos < chars.len() && chars[*pos] != '"' {
+        *pos += 1;
+    }
+
+    if *pos >= chars.len() {
+        return Err(Diagnostic::error("Unterminated double quote string")
+            .add_help("Add \" at the end of the String literal")
+            .with_location_span(*start, *pos)
+            .as_boxed());
+    }
+
+    *pos += 1;
+
+    // Identifier is being case-insensitive by default, convert to lowercase to be easy to compare and lookup
+    let literal = &chars[*start + 1..*pos - 1];
+    let string = String::from_utf8(literal.iter().map(|&c| c as u8).collect()).unwrap();
+
+    let location = Location {
+        start: *start,
+        end: *pos,
+    };
+
+    Ok(Token {
+        location,
+        kind: resolve_symbol_kind(string.to_string()),
+        literal: string,
+    })
 }
 
 fn consume_number(
@@ -900,13 +895,13 @@ fn consume_string(
 ) -> Result<Token, Box<Diagnostic>> {
     *pos += 1;
 
-    while *pos < chars.len() && chars[*pos] != '"' {
+    while *pos < chars.len() && chars[*pos] != '\'' {
         *pos += 1;
     }
 
     if *pos >= chars.len() {
-        return Err(Diagnostic::error("Unterminated double quote string")
-            .add_help("Add \" at the end of the String literal")
+        return Err(Diagnostic::error("Unterminated single quote string")
+            .add_help("Add ' at the end of the String literal")
             .with_location_span(*start, *pos)
             .as_boxed());
     }
