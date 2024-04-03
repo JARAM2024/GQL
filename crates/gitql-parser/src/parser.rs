@@ -1924,6 +1924,12 @@ fn parse_primary_expression(
         }
         TokenKind::LeftParen => parse_group_expression(context, env, tokens, position),
         TokenKind::Case => parse_case_expression(context, env, tokens, position),
+        TokenKind::Star => {
+            *position += 1;
+            Ok(Box::new(SymbolExpression {
+                value: "id".to_string(),
+            }))
+        }
         _ => Err(un_expected_expression_error(tokens, position)),
     }
 }
