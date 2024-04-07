@@ -6,6 +6,7 @@ use gitql_ast::expression::Expression;
 use gitql_ast::expression::ExpressionKind;
 use gitql_ast::expression::StringExpression;
 use gitql_ast::expression::StringValueType;
+use gitql_ast::expression::SymbolExpression;
 use gitql_ast::types::DataType;
 
 use crate::diagnostic::Diagnostic;
@@ -127,6 +128,17 @@ pub fn are_types_equals(
     // Both types are already equals without need for implicit casting
     if lhs_type == rhs_type {
         return TypeCheckResult::Equals;
+    }
+
+    // Bypass Undefiend Value
+    if rhs_type.is_undefined() && lhs_type.is_text() && lhs.kind() == ExpressionKind::Symbol {
+        let expr = rhs.as_any().downcast_ref::<SymbolExpression>().unwrap();
+        let string_literal_value = &expr.value;
+
+        return TypeCheckResult::RightSideCasted(Box::new(StringExpression {
+            value: string_literal_value.to_owned(),
+            value_type: StringValueType::Text,
+        }));
     }
 
     // Cast right hand side type from Text literal to time
