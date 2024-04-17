@@ -631,9 +631,8 @@ fn consume_identifier(chars: &[char], pos: &mut usize, start: &mut usize) -> Tok
 
     // Identifier is being case-insensitive by default, convert to lowercase to be easy to compare and lookup
     let literal = &chars[*start..*pos];
-    let string = String::from_utf8(literal.iter().map(|&c| c as u8).collect())
-        .unwrap()
-        .to_lowercase();
+    let mut string: String = literal.iter().collect();
+    string = string.to_lowercase();
 
     let location = Location {
         start: *start,
@@ -704,7 +703,7 @@ fn consume_number(
     }
 
     let literal = &chars[*start..*pos];
-    let string = String::from_utf8(literal.iter().map(|&c| c as u8).collect()).unwrap();
+    let string: String = literal.iter().collect();
     let literal_num = string.replace('_', "");
 
     let location = Location {
@@ -740,7 +739,7 @@ fn consume_backticks_identifier(
     *pos += 1;
 
     let literal = &chars[*start + 1..*pos - 1];
-    let identifier = String::from_utf8(literal.iter().map(|&c| c as u8).collect()).unwrap();
+    let identifier: String = literal.iter().collect();
 
     let location = Location {
         start: *start,
@@ -778,7 +777,7 @@ fn consume_binary_number(
     }
 
     let literal = &chars[*start..*pos];
-    let string = String::from_utf8(literal.iter().map(|&c| c as u8).collect()).unwrap();
+    let string: String = literal.iter().collect();
     let literal_num = string.replace('_', "");
     let convert_result = i64::from_str_radix(&literal_num, 2);
 
@@ -822,7 +821,7 @@ fn consume_octal_number(
     }
 
     let literal = &chars[*start..*pos];
-    let string = String::from_utf8(literal.iter().map(|&c| c as u8).collect()).unwrap();
+    let string: String = literal.iter().collect();
     let literal_num = string.replace('_', "");
     let convert_result = i64::from_str_radix(&literal_num, 8);
 
@@ -866,7 +865,7 @@ fn consume_hex_number(
     }
 
     let literal = &chars[*start..*pos];
-    let string = String::from_utf8(literal.iter().map(|&c| c as u8).collect()).unwrap();
+    let string: String = literal.iter().collect();
     let literal_num = string.replace('_', "");
     let convert_result = i64::from_str_radix(&literal_num, 16);
 
@@ -909,7 +908,7 @@ fn consume_string(
     *pos += 1;
 
     let literal = &chars[*start + 1..*pos - 1];
-    let string = String::from_utf8(literal.iter().map(|&c| c as u8).collect()).unwrap();
+    let string: String = literal.iter().collect();
 
     let location = Location {
         start: *start,
